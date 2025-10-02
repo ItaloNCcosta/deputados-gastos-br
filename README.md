@@ -1,157 +1,91 @@
-<<<<<<< HEAD
-# deputados-gastos-br
-=======
-# Demander Deputados 🚀
+# Deputados Gastos BR 🇧🇷
 
-Aplicação Laravel para sincronizar e exibir dados de deputados e suas despesas a partir da API aberta da Câmara dos Deputados.  
-Inclui sincronização automática em background via filas (Redis + Horizon), agendamento de jobs (Scheduler) e painel de monitoramento.
+Aplicação **Laravel 12** que consome a [API de Dados Abertos da Câmara dos Deputados](https://dadosabertos.camara.leg.br/) para sincronizar e exibir informações de gastos dos deputados federais do Brasil.
+O objetivo é oferecer uma ferramenta simples e rápida para consulta de despesas parlamentares, com processamento assíncrono e agendamento de sincronizações automáticas.
 
 ---
 
 ## 📦 Tecnologias
 
-- **Laravel 12**  
-- **MySQL**  
-- **Redis** (filas)  
-- **Laravel Horizon** (dashboard de filas)  
-- **Docker & Docker Compose**  
+* **Laravel 12**
+* **MySQL**
+* **Redis** (filas e cache)
+* **Laravel Horizon** (monitoramento de filas)
+* **Docker & Docker Compose**
 
 ---
 
 ## 🔧 Pré-requisitos
 
-- Docker (>= 20.10)  
-- Docker Compose (>= 1.27)  
+* Docker (>= 20.10)
+* Docker Compose (>= 1.27)
 
 ---
 
-## 🚀 Passo a passo
+## 🚀 Passo a passo rápido
 
-1. **Clone o repositório**  
+1. **Clone o repositório**
+
    ```bash
-   git clone https://github.com/ItaloNCcosta/demander-deputados.git
-
-   ou
-
-   git clone git@github.com:ItaloNCcosta/demander-deputados.git
-   cd demander-deputados
+   git clone https://github.com/ItaloNCcosta/deputados-gastos-br.git
+   cd deputados-gastos-br
    ```
 
-2. **Copie o `.env`**  
+2. **Copie o `.env` e ajuste variáveis**
+
    ```bash
    cp .env.example .env
    ```
-   Ajuste, se quiser, as credenciais MySQL ou outras variáveis.
 
-3. **Suba os containers**  
+3. **Suba os containers**
+
    ```bash
    docker compose up -d --build
    ```
-   Isso criará e iniciará os serviços:
-   - `redis`  
-   - `mysql`  
-   - `laravel` (PHP-FPM)  
-   - `nginx`  
-   - `worker` (queue:work)  
-   - `scheduler` (schedule:work)  
-   - `horizon`  
 
-4. **Instale dependências PHP**  
+4. **Instale dependências e prepare a aplicação**
+
    ```bash
-   docker exec -it demander-laravel composer install --optimize-autoloader --no-dev
+   docker compose exec app composer install
+   docker compose exec app php artisan key:generate
+   docker compose exec app php artisan migrate --force
    ```
 
-5. **Gere a chave da aplicação**  
-   ```bash
-   docker exec -it demander-laravel php artisan key:generate
-   ```
+5. **Acesse**
 
-6. **Rode migrações & seeders**  
-   ```bash
-   docker exec -it demander-laravel php artisan migrate --force
-   ```
-   Se você tiver o comando de bootstrap criado (veja `app:bootstrap-data`), pode rodar:
-   ```bash
-   docker exec -it demander-laravel php artisan app:bootstrap-data
-   ```
-   Isso irá sincronizar inicialmente todos os deputados e despesas.
-
-7. **Acesse a aplicação**  
-   - **Web**: http://127.0.0.1:8080  
-   - **Horizon**: http://127.0.0.1:8080/horizon  
+   * Web: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+   * Horizon: [http://127.0.0.1:8080/horizon](http://127.0.0.1:8080/horizon)
 
 ---
 
-## ⚙️ Gerenciamento de filas e agendamentos
+## 📚 Documentação detalhada
 
-- **Dashboard Horizon**  
-  Verifique o status de jobs, batches e métricas:  
-  `http://127.0.0.1:8080/horizon`
-
-- **Comandos úteis**  
-  ```bash
-  # Listar tarefas agendadas
-  docker exec -it demander-laravel php artisan schedule:list
-
-  # Forçar execução imediata dos agendamentos
-  docker exec -it demander-laravel php artisan schedule:run --verbose
-
-  # Reiniciar workers (limpa código cache e recarrega)
-  docker exec -it demander-laravel php artisan queue:restart
-
-  # Encerrar Horizon para reiniciar com nova config
-  docker exec -it demander-laravel php artisan horizon:terminate
-  ```
-
-- **Limpar filas e cache**  
-  ```bash
-  # Redis
-  docker exec -it demander-redis redis-cli FLUSHDB
-
-  # Failed jobs (database driver)
-  docker exec -it demander-laravel php artisan queue:flush
-
-  # Cache geral
-  docker exec -it demander-laravel php artisan cache:clear
-  ```
-
-- **Parar e remover todo o setup Docker**  
-  ```bash
-  docker-compose down --rmi all --volumes --remove-orphans
-  ```
+* [🏛 Arquitetura do Projeto](docs/architecture.md)
+* [📦 Docker Setup](docs/docker.md)
+* [⚡ Jobs, Workers e Horizon](docs/jobs-and-workers.md)
 
 ---
 
-## 📖 Estrutura de containers
+## ⚙️ Comandos úteis
 
-```text
-services:
-  redis           # broker de fila e cache
-  mysql           # banco de dados
-  laravel         # PHP-FPM + app code
-  nginx           # web server
-  worker          # php artisan queue:work
-  scheduler       # php artisan schedule:work
-  horizon         # php artisan horizon
+```bash
+# Rodar migrations novamente
+docker compose exec app php artisan migrate --force
+
+# Logs dos containers
+docker compose logs -f app
+docker compose logs -f horizon
+docker compose logs -f scheduler
+
+# Parar e remover tudo
+docker compose down
 ```
 
 ---
 
 ## 📝 Observações
 
-- A sincronização adota uma abordagem híbrida:
-  - **Stale-while-revalidate**: ao acessar a página, exibe dados do banco e dispara revalidação em background se estiverem “stale”.
-  - **Jobs agendados**: independentemente do acesso do usuário, há schedules definidos:
-    - `SyncAllDeputiesJob` rodando **a cada hora**.
-    - `SyncAllDeputiesExpensesJob` rodando **a cada quinze minutos**.
-- Ajuste no `.env`:  
-  ```dotenv
-  QUEUE_CONNECTION=redis
-  CACHE_DRIVER=redis
-  SESSION_DRIVER=redis
-  REDIS_HOST=redis
-  REDIS_PORT=6379
-  ```
-
-Pronto! Agora seu ambiente Docker está configurado para rodar automaticamente filas, agendamentos e dashboard de monitoramento. Qualquer dúvida, consulte a [documentação oficial do Laravel](https://laravel.com/docs/12.x).
->>>>>>> master
+* A aplicação consome e armazena localmente dados de gastos de deputados federais para consultas rápidas.
+* Sincronizações ocorrem em segundo plano através de **jobs** agendados e filas Redis.
+* **Horizon** oferece painel gráfico para monitorar workers e status das filas.
+* Estrutura pronta para desenvolvimento local com Docker e fácil de implantar em produção.
