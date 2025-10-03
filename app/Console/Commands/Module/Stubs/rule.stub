@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{namespace}};
+
+use Illuminate\Contracts\Validation\Rule;
+
+final class {{class}} implements Rule
+{
+    /**
+     * Determine if the validation rule passes.
+     */
+    public function passes($attribute, $value): bool
+    {
+        //
+    }
+
+    /**
+     * Get the validation error message.
+     */
+    public function message(): string
+    {
+        return '';
+    }
+}
