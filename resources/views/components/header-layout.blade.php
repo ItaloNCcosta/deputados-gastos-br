@@ -1,11 +1,19 @@
+@props([
+  'names' => ['VigiaBR','Deputados gastos BR'],
+  'period' => 10000,
+  'href' => url('/'),
+  'class' => 'flex items-center gap-2 font-bold text-lg text-emerald-600',
+])
+
 <header class="bg-white border-b border-slate-200/60">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-        <a href="{{ url('/') }}" class="flex items-center gap-2 font-bold text-lg text-emerald-600">
+        <a href="{{ $href }}" class="{{ $class }}" x-data="{ names: @js($names), i: 0, t: null, start() { this.t = setInterval(() => this.i = (this.i + 1) % this.names.length, {{ (int) $period }}) } }" x-init="start()"
+            @mouseenter="clearInterval(t)" @mouseleave="start()">
             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2" />
                 <circle cx="12" cy="12" r="10" />
             </svg>
-            VigiaBR
+            <span x-text="names[i]" aria-live="polite">{{ $names[0] }}</span>
         </a>
         <nav class="hidden md:flex gap-6 text-sm font-medium text-slate-600">
             <a href="{{ route('deputies.index') }}" class="hover:text-emerald-600">Buscar</a>
